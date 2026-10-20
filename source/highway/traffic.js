@@ -224,6 +224,8 @@ export class Traffic {
     const d = this.ahead(car.dir, ps, car.s);
     if (d > -BEHIND - 60 && d < AHEAD + 60) return;
     if (car.wreck) return;
+    // Dev traffic density: some cars sit out until the next pass.
+    if (Math.random() > (this.density ?? 1)) return;
     // Re-enter at the far edge the player is driving toward (or behind, for slower traffic).
     const front = d < 0;
     const nd = front ? AHEAD - Math.random() * 80 : -BEHIND + Math.random() * 60;

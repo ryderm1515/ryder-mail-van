@@ -644,7 +644,7 @@ actions.teleport = async (id) => {
   if (!z) return;
   if (id === "interstate") {
     if (highwayLoading) return;
-    if (!highway) highway = new Highway({ scene, physics, toon, audio, lights: { sun, hemi, sunOffset }, renderer, persp, ui });
+    if (!highway) highway = new Highway({ scene, physics, toon, audio, lights: { sun, hemi, sunOffset }, renderer, persp, ui, damage, actions });
     if (!highway.built) {
       highwayLoading = true;
       const ld = highwayLoader();

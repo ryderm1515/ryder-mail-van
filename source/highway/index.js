@@ -6,6 +6,7 @@ import { Traffic } from "./traffic.js";
 import { Town } from "../town.js";
 import { Gps } from "./gps.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { Run } from "./run.js";
 
 // Interstate 16: an open-world loop with live traffic, two interchanges and a
 // mail-route neighbourhood off each exit.
@@ -13,8 +14,8 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 const tick = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
 
 export class Highway {
-  constructor({ scene, physics, toon, audio, lights, renderer, persp, ui }) {
-    Object.assign(this, { scene, physics, toon, audio, lights, renderer, persp, ui });
+  constructor({ scene, physics, toon, audio, lights, renderer, persp, ui, damage, actions }) {
+    Object.assign(this, { scene, physics, toon, audio, lights, renderer, persp, ui, damage, actions });
     this.active = false;
     this.built = false;
     this.player = { s: 0, onMain: false };
@@ -280,7 +281,15 @@ export class Highway {
     if ("environmentIntensity" in sc) (this.saved.envI = sc.environmentIntensity), (sc.environmentIntensity = 0.55);
     this.reseedGrass(sp.position[0], sp.position[2]);
     this.gps.show(true);
-    this.newMission();
+    // Run loop: health, score, route and results.
+    if (!this.run) {
+      this.run = new Run(this);
+      const prev = this.damage?.onImpact;
+      if (this.damage) this.damage.onImpact = (sev) => (prev?.(sev), this.active && this.run.onImpact(sev));
+    }
+    this.damage?.repair();
+    this.run.start();
+    document.getElementById("activity").hidden = true;
     return sp;
   }
   leave() {
@@ -303,6 +312,9 @@ export class Highway {
       L.hemi.groundColor.copy(s.hemiG);
     }
     this.mission = null;
+    this.run?.stop();
+    this.physics.paused = false;
+    this.setDebug(false);
     this.gps?.show(false);
     if (s) {
       this.scene.environment = s.env || null;
@@ -322,12 +334,86 @@ export class Highway {
     this.mission = { ...pick, pos, label: pick.lot.num + " · " + pick.town.label };
     this.hud();
   }
-  hud() {
-    const a = document.getElementById("activity");
-    if (!a) return;
-    a.hidden = false;
-    document.getElementById("activity-name").textContent = this.mission ? "Mail for " + this.mission.label : "Mail route";
-    document.getElementById("activity-value").textContent = this.delivered + " delivered";
+  hud() {}
+  // Fresh run from the spawn point.
+  restart() {
+    const sp = this.spawn();
+    this.player.s = sp.s;
+    this.traffic.setActive(true, sp.s);
+    this.damage?.repair();
+    this.physics.teleport(sp.position, sp.yaw);
+    this.run.start();
+  }
+  exit() {
+    this.actions?.teleport?.("garage");
+  }
+  // Dev teleports: towns, exits and the next stop.
+  teleports() {
+    const go = (x, z, yaw) => () => {
+      this.physics.teleport([x, 1.4, z], yaw);
+      this.reseedGrass(x, z);
+    };
+    const list = [];
+    for (const t of this.towns) {
+      const p = t.route.at(12);
+      list.push([t.label, go(p.x, p.z, p.yaw)]);
+    }
+    for (const ic of this.layout.interchanges) {
+      const p = this.layout.main.point(ic.sc - 1500, PAVE_OUT - 1.6),
+        a = this.layout.main.at(ic.sc - 1500);
+      list.push(["Before exit " + ic.exit, go(p.x, p.z, Math.atan2(a.tz, -a.tx))]);
+    }
+    list.push([
+      "Next stop",
+      () => {
+        const m = this.mission;
+        if (!m) return;
+        const R = m.town.route;
+        let best = 0,
+          bd = 1e9;
+        for (let d = 0; d < R.length; d += 1) {
+          const q = R.at(d),
+            dd = Math.hypot(q.x - m.pos.x, q.z - m.pos.z);
+          if (dd < bd) (bd = dd), (best = d);
+        }
+        const q = R.at(Math.max(0, best - 25));
+        go(q.x, q.z, q.yaw)();
+      },
+    ]);
+    return list;
+  }
+  // Debug overlay: ramps, crossroads, town streets and delivery triggers.
+  setDebug(on) {
+    if (on && !this.debugGroup) {
+      const pts = [];
+      const add = (path, step = 4, y = 0.4) => {
+        for (let d = 0; d + step <= path.length; d += step) {
+          const a = path.at(d),
+            b = path.at(d + step);
+          pts.push(a.x, (a.y || 0) + y, a.z, b.x, (b.y || 0) + y, b.z);
+        }
+      };
+      for (const ic of this.layout.interchanges) {
+        ic.ramps.forEach((r) => add(r.path, 3));
+        add(ic.cross, 4);
+      }
+      this.towns.forEach((t) => add(t.route, 3));
+      for (const t of this.towns)
+        for (const l of t.lots || []) {
+          const c = l.mailbox.clone().add(t.origin);
+          for (let i = 0; i < 24; i++) {
+            const a0 = (i / 24) * Math.PI * 2,
+              a1 = ((i + 1) / 24) * Math.PI * 2;
+            pts.push(c.x + Math.cos(a0) * 5.5, 0.3, c.z + Math.sin(a0) * 5.5, c.x + Math.cos(a1) * 5.5, 0.3, c.z + Math.sin(a1) * 5.5);
+          }
+        }
+      const g = new T.BufferGeometry();
+      g.setAttribute("position", new T.Float32BufferAttribute(pts, 3));
+      this.debugGroup = new T.LineSegments(g, new T.LineBasicMaterial({ color: "#ff3d7f", depthTest: false }));
+      this.debugGroup.renderOrder = 10;
+      this.scene.add(this.debugGroup);
+    }
+    if (this.debugGroup) this.debugGroup.visible = on;
   }
   waypoint() {
     return this.mission ? { pos: [this.mission.pos.x, 1.2, this.mission.pos.z] } : null;
@@ -336,9 +422,10 @@ export class Highway {
     const m = this.mission;
     this.delivered++;
     this.letterAnim = { t: 0, from: van.clone().add(new T.Vector3(0, 1.4, 0)), to: m.pos.clone().add(new T.Vector3(0, 1.15, 0)) };
-    this.ui?.toast?.("Delivered to " + m.label + ". Next stop on your map.");
+    this.ui?.toast?.("Delivered to " + m.label + ".");
     this.audio?.event?.("success");
-    this.newMission();
+    if (this.run?.active) this.run.onDeliver();
+    else this.newMission();
   }
   // --------------------------------------------------------------- update
   update(dt, { position, velocity, speed, camera, rotation }) {
@@ -390,7 +477,7 @@ export class Highway {
       this.letter.rotation.set(0, k * 6, Math.sin(k * 9) * 0.3);
       if (a.t >= 1.4) this.letterAnim = null;
     }
-    this.hud();
+    this.run?.update(dt, { position, speed });
     if (rotation) this.gps.update(position, new T.Vector3(-1, 0, 0).applyQuaternion(rotation).setY(0).normalize(), speed, this.traffic.cars);
   }
 }
