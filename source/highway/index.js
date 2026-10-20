@@ -7,6 +7,7 @@ import { Town } from "../town.js";
 import { Gps } from "./gps.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { Run } from "./run.js";
+import { Cinema } from "../cinema.js";
 
 // Interstate 16: an open-world loop with live traffic, two interchanges and a
 // mail-route neighbourhood off each exit.
@@ -177,7 +178,7 @@ export class Highway {
     g.computeVertexNormals();
     const n = g.attributes.normal;
     for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0);
-    const m = this.toon(new T.MeshToonMaterial({ vertexColors: true, side: T.DoubleSide }));
+    const m = this.toon(new T.MeshToonMaterial({ vertexColors: true, side: T.DoubleSide, color: "#e2dcb4" }));
     this.tufts = new T.InstancedMesh(g, m, 9000);
     this.tufts.instanceColor = new T.InstancedBufferAttribute(new Float32Array(9000 * 3), 3);
     this.tufts.frustumCulled = false;
@@ -260,16 +261,19 @@ export class Highway {
       hemiC: L.hemi.color.clone(),
       hemiG: L.hemi.groundColor.clone(),
     };
-    sc.fog = new T.Fog(new T.Color("#c7d3d8"), 350, 5200);
-    sc.background = new T.Color("#c7d3d8");
+    // Warm storybook haze, matched to the Morning Route.
+    sc.fog = new T.Fog(new T.Color("#ead9c2"), 420, 5200);
+    sc.background = new T.Color("#ead9c2");
     this.persp.far = 12000;
     this.persp.near = 0.08;
     this.persp.updateProjectionMatrix();
     L.sunOffset.set(-18, 28, 13);
-    L.sun.intensity = 2.6;
-    L.hemi.intensity = 1.9;
-    L.hemi.color.set("#eef4f8");
-    L.hemi.groundColor.set("#7d8a63");
+    this.saved.sunC = L.sun.color.clone();
+    L.sun.color.set("#ffe2b8");
+    L.sun.intensity = 3.1;
+    L.hemi.intensity = 1.45;
+    L.hemi.color.set("#f6efe4");
+    L.hemi.groundColor.set("#6f8452");
     // Soft studio reflections for car paint and glass.
     if (!this.env) {
       const pm = new T.PMREMGenerator(this.renderer);
@@ -307,6 +311,7 @@ export class Highway {
       this.persp.updateProjectionMatrix();
       L.sunOffset.copy(s.sunOffset);
       L.sun.intensity = s.sunI;
+      if (s.sunC) L.sun.color.copy(s.sunC);
       L.hemi.intensity = s.hemiI;
       L.hemi.color.copy(s.hemiC);
       L.hemi.groundColor.copy(s.hemiG);
@@ -335,6 +340,15 @@ export class Highway {
     this.hud();
   }
   hud() {}
+  // Film-style post (bloom + warm grade + vignette) for every exterior view.
+  render(time, camera) {
+    if (!this.active || this.postOff) return false;
+    if (!this.cinema) this.cinema = new Cinema(this.renderer, this.scene, camera);
+    this.cinema.camera = camera;
+    this.cinema.grade.uniforms.uStrength.value = 0.4; // lighter than the film: readable while driving
+    this.cinema.render(time, { focus: 0 });
+    return true;
+  }
   // Fresh run from the spawn point.
   restart() {
     const sp = this.spawn();

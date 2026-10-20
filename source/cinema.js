@@ -91,7 +91,7 @@ export class Cinema {
       this.bokeh.uniforms.aspect.value = cam.aspect;
     }
     this.grade.uniforms.uTime.value = t;
-    this.grade.uniforms.uAspect.value = cam.aspect;
+    this.grade.uniforms.uAspect.value = cam.aspect ?? innerWidth / innerHeight;
     this.grade.uniforms.uFade.value = fade;
     this.composer.render();
   }

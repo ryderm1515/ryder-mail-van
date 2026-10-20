@@ -357,7 +357,7 @@ export class HighwayWorld {
     const grass = grassTexture();
     const t = this.terrain;
     grass.repeat.set(t.SIZE_X / 9, t.SIZE_Z / 9);
-    this.grassMat = this.toon(new T.MeshToonMaterial({ map: grass, vertexColors: true }));
+    this.grassMat = this.toon(new T.MeshToonMaterial({ map: grass, vertexColors: true, color: "#e4dcb8" }));
     this.disposables.push(grass, this.grassMat);
     this.sky();
     this.mountains();
@@ -386,9 +386,9 @@ export class HighwayWorld {
         void main(){
           vec3 d = normalize(vDir);
           float y = clamp(d.y, -0.2, 1.0);
-          vec3 horizon = vec3(0.80, 0.86, 0.90), zenith = vec3(0.28, 0.50, 0.82);
+          vec3 horizon = vec3(0.97, 0.86, 0.72), zenith = vec3(0.38, 0.60, 0.86);
           vec3 col = mix(horizon, zenith, pow(smoothstep(0.0, 0.85, y), 0.65));
-          col = mix(col, vec3(0.74, 0.78, 0.78), smoothstep(0.02, -0.12, y));
+          col = mix(col, vec3(0.86, 0.8, 0.7), smoothstep(0.02, -0.12, y));
           float s = max(dot(d, uSun), 0.0);
           col += vec3(1.0, 0.86, 0.62) * (pow(s, 8.0) * 0.18 + pow(s, 120.0) * 0.6) + vec3(1.4,1.3,1.1) * smoothstep(0.9993, 0.9997, s) * 4.0;
           // Clouds: fair-weather cumulus on a dome.

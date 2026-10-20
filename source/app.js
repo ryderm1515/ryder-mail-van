@@ -1421,7 +1421,7 @@ function frame(ms) {
     packages && (packages.group.visible = true);
   }
   dash.render(camera);
-  if (!film?.render(time)) renderer.render(scene, camera);
+  if (!film?.render(time) && !(camMode !== 2 && highway?.render?.(time, camera))) renderer.render(scene, camera);
 }
 requestAnimationFrame(animate);
 if (new URLSearchParams(location.search).has("qa")) import("./qa.js");
