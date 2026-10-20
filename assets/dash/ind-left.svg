@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="35.27" height="38.55" viewBox="0 0 35.27 38.55" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Indicator / Left blinker" filter="url(#filter0_d_0_7)">
+<path id="Vector" d="M20.69 12.57H35.27V25.98H20.69V38.55L0 19.27L20.69 0V12.57Z" fill="#86C441"/>
+</g>
+<defs>
+<filter id="filter0_d_0_7" x="-8" y="-8" width="51.27" height="54.55" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset/>
+<feGaussianBlur stdDeviation="4"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.525 0 0 0 0 0.769 0 0 0 0 0.255 0 0 0 0.25 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_7"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_7" result="shape"/>
+</filter>
+</defs>
+</svg>
