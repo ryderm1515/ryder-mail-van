@@ -595,6 +595,16 @@ export class HighwayWorld {
       this.ribbon(phys, x, -8.8, 8.8, 0.13, 0, len, 2, road);
       this.embank(pave, phys, x, 8.6, len, 740 - 46, 740 + 46);
       this.bridge(ic);
+      // Town ring roads (two lanes, kerb lines, dashed centre).
+      for (const lp of ic.loops) {
+        const L = lp.length;
+        this.ribbon(pave, lp, -4.4, 4.4, 0.05, 0, L, 2, road, [LANE_W, 9]);
+        this.ribbon(pave, lp, -5.4, -4.4, 0.04, 0, L, 2, shoulder, [LANE_W, 9]);
+        this.ribbon(pave, lp, 4.4, 5.4, 0.04, 0, L, 2, shoulder, [LANE_W, 9]);
+        this.ribbon(marks, lp, -0.09, 0.09, 0.07, 4, L - 4, 3, yellow, null, 3, 6);
+        this.ribbon(marks, lp, 4.0, 4.15, 0.07, 0, L, 2, white);
+        this.ribbon(marks, lp, -4.15, -4.0, 0.07, 0, L, 2, white);
+      }
     }
     const pm = this.mesh(pave.geometry(), asphalt, "Pavement", false);
     pm.receiveShadow = true;

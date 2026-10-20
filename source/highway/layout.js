@@ -59,7 +59,20 @@ export function buildLayout() {
     for (let u = -740; u <= 520; u += 10) pts.push([c.x + c.nx * u, crossY(u), c.z + c.nz * u]);
     const cross = new Path(pts, { step: 1 });
     const end = { x: c.x + c.nx * -740, z: c.z + c.nz * -740 };
+    // Ring roads: both ends of the town street curve back and cross the
+    // crossroad 210 m in, so there are no dead ends.
+    const O = { x: end.x + 300, z: end.z - 2 };
+    const J = cross.at(210),
+      jx = J.x - O.x,
+      jz = J.z - O.z,
+      sz = Math.sign(jz - 2) || 1;
+    const W = (pts) => new Path(pts.map(([x, z]) => [O.x + x, O.z + z]), { step: 1 });
+    const loops = [
+      W([[420, 0], [468, sz * 4], [505, sz * 35], [520, sz * 100], [505, sz * 165], [455, jz - sz * 6], [380, jz], [jx + 9, jz]]),
+      W([[-520, 2], [-566, 2 + sz * 3], [-604, sz * 35], [-618, sz * 100], [-604, sz * 165], [-556, jz - sz * 6], [-480, jz], [jx - 9, jz]]),
+    ];
     interchanges.push({
+      loops,
       ...d,
       sc,
       c,
@@ -146,7 +159,8 @@ export function buildTerrain(layout, towns) {
     for (const r of ic.ramps) for (let s = 0; s < r.path.length; s += 8) seed(r.path.at(s).x, r.path.at(s).z, 22);
     for (let s = 0; s < ic.cross.length; s += 8) seed(ic.cross.at(s).x, ic.cross.at(s).z, 24);
   }
-  for (const t of towns) for (let x = -560; x <= 460; x += 30) for (let z = -260; z <= 260; z += 30) seed(t.x + x, t.z + z, 30);
+  for (const ic of interchanges) for (const lp of ic.loops) for (let s = 0; s < lp.length; s += 8) seed(lp.at(s).x, lp.at(s).z, 20);
+  for (const t of towns) for (let x = -650; x <= 560; x += 30) for (let z = -260; z <= 260; z += 30) seed(t.x + x, t.z + z, 30);
   // Chamfer passes to spread the distance field.
   const D1 = CELL,
     D2 = CELL * Math.SQRT2;

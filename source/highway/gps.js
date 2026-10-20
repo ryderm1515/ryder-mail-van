@@ -33,6 +33,7 @@ export class Gps {
     for (const ic of interchanges) {
       for (const r of ic.ramps) lines.push({ pts: sample(r.path, 10), w: 9, c: "#b8bec1" });
       lines.push({ pts: sample(ic.cross, 10), w: 14, c: "#d7dbdd" });
+      for (const lp of ic.loops) lines.push({ pts: sample(lp, 10), w: 11, c: "#e3dfd2" });
     }
     for (const t of this.hw.towns || []) {
       const o = t.origin,
@@ -48,7 +49,7 @@ export class Gps {
   }
   // ---------------------------------------------------------------- route
   townOf(x, z) {
-    for (const t of this.hw.towns) if (x > t.origin.x - 760 && x < t.origin.x + 520 && Math.abs(z - t.origin.z) < 340) return t;
+    for (const t of this.hw.towns) if (x > t.origin.x - 760 && x < t.origin.x + 580 && Math.abs(z - t.origin.z) < 340) return t;
     return null;
   }
   route(px, pz) {

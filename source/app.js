@@ -393,6 +393,9 @@ function setTheme(d) {
   ui?.icon("theme", d ? "moon" : "sun");
 }
 const actions = {
+  snapCamera() {
+    camInit = false;
+  },
   power() {
     ignition = !ignition;
     ui.engine(ignition);

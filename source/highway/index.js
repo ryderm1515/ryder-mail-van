@@ -71,6 +71,7 @@ export class Highway {
     for (const ic of this.layout.interchanges) {
       for (const r of ic.ramps) for (let s = 0; s <= r.path.length; s += 1.5) { const p = r.path.at(s); mark(p.x, p.z, 8.5); }
       for (let s = 0; s <= ic.cross.length; s += 1.5) { const p = ic.cross.at(s); mark(p.x, p.z, 10); }
+      for (const lp of ic.loops) for (let s = 0; s <= lp.length; s += 1.5) { const p = lp.at(s); mark(p.x, p.z, 6.5); }
     }
     this.townBoxes = this.layout.interchanges.map((ic) => ic.townOrigin);
   }
@@ -365,6 +366,7 @@ export class Highway {
   teleports() {
     const go = (x, z, yaw) => () => {
       this.physics.teleport([x, 1.4, z], yaw);
+      this.actions?.snapCamera?.();
       this.reseedGrass(x, z);
     };
     const list = [];
@@ -377,6 +379,10 @@ export class Highway {
         a = this.layout.main.at(ic.sc - 1500);
       list.push(["Before exit " + ic.exit, go(p.x, p.z, Math.atan2(a.tz, -a.tx))]);
     }
+    this.layout.interchanges.forEach((ic, i) => {
+      const a = ic.loops[0].at(70);
+      list.push([this.towns[i].label + " ring road", go(a.x, a.z, Math.atan2(a.tz, -a.tx))]);
+    });
     list.push([
       "Next stop",
       () => {
