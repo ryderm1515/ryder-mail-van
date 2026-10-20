@@ -206,7 +206,7 @@ export class Run {
     this.q("routeLab").textContent = `Route ${this.routesDone + 1} · stop ${Math.min(this.stop_i + 1, this.route.length)}/${this.route.length}`;
     this.q("next").textContent = m ? m.label : "—";
     const here = this.hw.towns.find((t) => Math.abs(pos.x - t.origin.x) < 560 && Math.abs(pos.z - t.origin.z) < 300);
-    this.q("where").textContent = (here ? here.label : "I-16") + (m ? " · " + km(Math.hypot(pos.x - m.pos.x, pos.z - m.pos.z)) : "");
+    this.q("where").textContent = (here ? here.label : this.hw.zoneName?.(pos) || "I-16") + (m ? " · " + km(Math.hypot(pos.x - m.pos.x, pos.z - m.pos.z)) : "");
   }
   pop(text, kind) {
     const e = document.createElement("div");

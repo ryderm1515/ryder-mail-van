@@ -18,6 +18,14 @@ export const PAVE_OUT = EDGE_OUT + OUT_SHOULDER; // 25.6
 export const laneOffset = (lane) => EDGE_IN + LANE_W * (LANES - 1 - lane) + LANE_W / 2; // lane 0 = right/slow
 export const BRIDGE_Y = 7.6;
 
+// Named areas inside the loop (see zones.js); terrain flattens under them.
+export const ZONES = [
+  { id: "downtown", name: "Riverside Downtown", x: W0.x - 2780, z: W0.z, r: 430 },
+  { id: "industrial", name: "Eastport Industrial", x: W0.x + 2800, z: W0.z, r: 400 },
+  { id: "farms", name: "Orchard Fields", x: W0.x - 1250, z: W0.z + 560, r: 380 },
+  { id: "farms2", name: "Orchard Fields", x: W0.x + 1300, z: W0.z - 560, r: 380 },
+];
+
 const LOOP = [
   [-2600, -1200], [-1300, -1240], [0, -1200], [1300, -1160], [2600, -1200], [3350, -950], [3600, 0], [3350, 950],
   [2600, 1200], [1300, 1250], [0, 1180], [-1300, 1210], [-2600, 1200], [-3350, 950], [-3600, 0], [-3350, -950],
@@ -192,7 +200,11 @@ export function buildTerrain(layout, towns) {
         z = Z0 + j * CELL;
       const d = dist[k];
       const ramp = Math.min(1, Math.max(0, (d - 40) / 380));
-      const s = ramp * ramp * (3 - 2 * ramp);
+      let s = ramp * ramp * (3 - 2 * ramp);
+      for (const zn of ZONES) {
+        const f = Math.min(1, Math.max(0, (Math.hypot(x - zn.x, z - zn.z) - zn.r) / 300));
+        s *= zn.id.startsWith("farms") ? 0.35 + 0.65 * f : f * f * (3 - 2 * f);
+      }
       const h = fbm(x / 520, z / 520) * 70 - 20 + fbm(x / 140 + 9, z / 140) * 14;
       // Edge of the map climbs into ridges so the world feels enclosed.
       const ex = Math.max(0, Math.abs(x - W0.x) - 4000) / 800,

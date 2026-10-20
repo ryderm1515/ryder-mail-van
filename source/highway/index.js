@@ -8,6 +8,7 @@ import { Gps } from "./gps.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { Run } from "./run.js";
 import { Cinema } from "../cinema.js";
+import { buildZones, zoneAt, ZONES } from "./zones.js";
 
 // Interstate 16: an open-world loop with live traffic, two interchanges and a
 // mail-route neighbourhood off each exit.
@@ -36,6 +37,7 @@ export class Highway {
     await tick();
     await this.trees();
     this.grass();
+    this.zones = buildZones(this);
     this.pavedCells();
     progress(0.65, "Building neighborhoods");
     await tick();
@@ -119,6 +121,8 @@ export class Highway {
         z = t.Z0 + rnd() * t.SIZE_Z;
       const d = t.distAt(x, z);
       if (d < 26) continue;
+      const zn = zoneAt(x, z);
+      if (zn && (!zn.id.startsWith("farms") || rnd() < 0.8) && Math.hypot(x - zn.x, z - zn.z) < zn.r + 60) continue;
       const clump = fbm(x / 180, z / 180);
       if (clump < 0.48 && rnd() > 0.03) continue;
       const h = t.sample(x, z);
@@ -363,6 +367,10 @@ export class Highway {
     this.actions?.teleport?.("garage");
   }
   // Dev teleports: towns, exits and the next stop.
+  zoneName(p) {
+    const z = zoneAt(p.x, p.z);
+    return z && Math.hypot(p.x - z.x, p.z - z.z) < z.r + 200 ? z.name : null;
+  }
   teleports() {
     const go = (x, z, yaw) => () => {
       this.physics.teleport([x, 1.4, z], yaw);
@@ -383,6 +391,13 @@ export class Highway {
       const a = ic.loops[0].at(70);
       list.push([this.towns[i].label + " ring road", go(a.x, a.z, Math.atan2(a.tz, -a.tx))]);
     });
+    for (const zn of ZONES.slice(0, 3)) {
+      // Nearest highway point to the zone, on the inside shoulder.
+      const sc = this.layout.main.project(zn.x, zn.z).s,
+        p = this.layout.main.point(sc, PAVE_OUT - 1.6),
+        a = this.layout.main.at(sc);
+      list.push([zn.name, go(p.x, p.z, Math.atan2(a.tz, -a.tx))]);
+    }
     list.push([
       "Next stop",
       () => {
