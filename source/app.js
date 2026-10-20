@@ -620,25 +620,91 @@ actions.drive = () => {
   if (gear === "P" || gear === "N") setGear("D");
 };
 function highwayLoader() {
+  // Storybook drive-out: parallax hills, a guide sign, and the route as the progress bar.
+  let seed = 5;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  // A 1200-wide tile drawn twice, so translateX(-50%) loops seamlessly.
+  const strip = (h, draw) => `<svg viewBox="0 0 2400 ${h}" preserveAspectRatio="none">${draw(0)}${draw(1200)}</svg>`;
+  const hills = (h, base, amp, n, fill) => (o) => {
+    let d = `M${o} ${h}L${o} ${base}`;
+    for (let i = 0; i <= n; i++) {
+      const x = o + (i / n) * 1200,
+        t = (i / n) * Math.PI * 2,
+        y = base - amp * (0.62 + 0.24 * Math.sin(t * 2 + 0.6) + 0.14 * Math.sin(t * 3 + 2.1));
+      d += i ? ` Q${x - 600 / n} ${y - amp * 0.35} ${x} ${y}` : ` L${x} ${y}`;
+    }
+    return `<path d="${d} L${o + 1200} ${base} L${o + 1200} ${h}Z" fill="${fill}"/>`;
+  };
+  const trees = (o) => {
+    let g = "";
+    seed = 9;
+    for (let i = 0; i < 22; i++) {
+      const x = o + 20 + i * 54 + rnd() * 20,
+        y = 92 + rnd() * 26,
+        r = 12 + rnd() * 9,
+        c = ["#6f9a52", "#7fa85a", "#5f8a49"][i % 3];
+      g += `<rect x="${x - 2}" y="${y}" width="4" height="${r}" rx="2" fill="#7a5a43"/><circle cx="${x}" cy="${y - r * 0.2}" r="${r}" fill="${c}"/><circle cx="${x - r * 0.35}" cy="${y - r * 0.5}" r="${r * 0.45}" fill="#ffffff22"/>`;
+    }
+    return g;
+  };
+  const verge = (o) => {
+    let g = "";
+    for (let i = 0; i < 12; i++) g += `<rect x="${o + i * 100 + 46}" y="18" width="7" height="34" rx="2" fill="#efe9da"/><rect x="${o + i * 100 + 46}" y="22" width="7" height="5" fill="#d97a5a"/>`;
+    g += `<rect x="${o}" y="26" width="1200" height="6" rx="3" fill="#c9cdc9"/>`;
+    // A mailbox now and then.
+    g += `<rect x="${o + 640}" y="8" width="5" height="44" fill="#8a6a50"/><rect x="${o + 626}" y="0" width="34" height="18" rx="9" fill="#2d4a8a"/><rect x="${o + 655}" y="-8" width="4" height="14" fill="#e05a4a"/>`;
+    return g;
+  };
   const el = document.createElement("div");
   el.className = "hw-load";
-  el.innerHTML = `<div class="hw-sky"><div class="hw-sun"></div><div class="hw-hills h1"></div><div class="hw-hills h2"></div></div>
-  <div class="hw-road"><div class="hw-dash"></div></div>
-  <svg class="hw-van" viewBox="0 0 120 70" aria-hidden="true"><rect x="6" y="10" width="78" height="40" rx="6" fill="#f4f4ef"/><path d="M84 22h18l12 14v14H84z" fill="#f4f4ef"/><path d="M88 26h12l8 10H88z" fill="#8fc3e6"/><rect x="6" y="34" width="108" height="5" fill="#2d5ba8"/><rect x="6" y="40" width="108" height="3" fill="#d23a3a"/><circle cx="28" cy="52" r="9" fill="#2a2d31"/><circle cx="28" cy="52" r="4" fill="#bfc4c8"/><circle cx="94" cy="52" r="9" fill="#2a2d31"/><circle cx="94" cy="52" r="4" fill="#bfc4c8"/><rect x="18" y="16" width="26" height="12" rx="2" fill="#e9e7df"/></svg>
-  <div class="hw-shield"><span>INTERSTATE</span><b>16</b></div>
-  <div class="hw-info"><strong>Heading out on I-16</strong><span class="hw-step">Surveying the route</span><div class="hw-bar"><i></i></div></div>`;
+  el.innerHTML = `
+  <div class="hwl-sky"><div class="hwl-sun"></div>
+    <div class="hwl-cloud c1"></div><div class="hwl-cloud c2"></div><div class="hwl-cloud c3"></div></div>
+  <div class="hwl-layer far">${strip(200, hills(200, 150, 90, 7, "#c3c9da"))}</div>
+  <div class="hwl-layer mid">${strip(200, (o) => hills(200, 160, 55, 9, "#a9c27f")(o) + trees(o))}</div>
+  <div class="hwl-layer verge">${strip(60, verge)}</div>
+  <div class="hwl-road"><div class="hwl-dash"></div><div class="hwl-edge"></div></div>
+  <div class="hwl-van">
+    <div class="hwl-lines"><i></i><i></i><i></i></div>
+    <svg viewBox="0 0 220 120" aria-hidden="true">
+      <ellipse cx="112" cy="110" rx="96" ry="7" fill="#00000026"/>
+      <path d="M14 22c0-8 6-14 14-14h120c8 0 13 4 15 10l4 14h18c6 0 10 3 13 8l16 26c2 3 3 6 3 10v18c0 5-4 9-9 9H20c-4 0-6-3-6-6z" fill="#f6f1e6"/>
+      <path d="M14 22c0-8 6-14 14-14h120c8 0 13 4 15 10l2 6H14z" fill="#fffdf7"/>
+      <path d="M170 38h16c4 0 7 2 9 5l13 22h-38z" fill="#9fcbe6"/><path d="M174 41h8l-6 20h-2z" fill="#ffffff70"/>
+      <rect x="130" y="38" width="32" height="42" rx="4" fill="#eee7d8" stroke="#d8cfbd"/><rect x="134" y="42" width="24" height="18" rx="3" fill="#9fcbe6"/>
+      <rect x="14" y="74" width="205" height="7" fill="#2f5ea8"/><rect x="14" y="81" width="205" height="4" fill="#d9483b"/>
+      <rect x="30" y="34" width="70" height="26" rx="5" fill="#ebe4d4"/><path d="M48 44h34l-17 10z" fill="none" stroke="#2f5ea8" stroke-width="3" stroke-linejoin="round"/><rect x="48" y="44" width="34" height="0.1"/>
+      <rect x="208" y="70" width="10" height="7" rx="3" fill="#fff4c2"/><rect x="12" y="62" width="6" height="12" rx="2" fill="#d9483b"/>
+      <rect x="196" y="34" width="4" height="12" rx="2" fill="#4a4f55"/>
+      <g class="hwl-wheel" style="transform-origin:52px 96px"><circle cx="52" cy="96" r="15" fill="#2b2e33"/><circle cx="52" cy="96" r="7" fill="#c9ced2"/><rect x="50.5" y="89" width="3" height="14" fill="#8f979d"/></g>
+      <g class="hwl-wheel" style="transform-origin:176px 96px"><circle cx="176" cy="96" r="15" fill="#2b2e33"/><circle cx="176" cy="96" r="7" fill="#c9ced2"/><rect x="174.5" y="89" width="3" height="14" fill="#8f979d"/></g>
+    </svg>
+  </div>
+  <div class="hwl-sign"><div class="hwl-board">
+    <div class="hwl-shield"><span>INTERSTATE</span><b>16</b></div>
+    <div class="hwl-dest"><b>Willow Lane</b><b>Maple Hollow</b><small>Mail route · Exits 12 &amp; 27</small></div>
+  </div><i></i><i></i></div>
+  <div class="hwl-card">
+    <div class="hwl-route"><div class="hwl-track"><i></i></div>
+      <span style="left:0%">Depot</span><span style="left:50%">Willow Lane</span><span style="left:100%">Maple Hollow</span>
+      <em class="hwl-dot"></em></div>
+    <div class="hwl-step">Surveying the route</div>
+  </div>`;
   document.body.append(el);
   requestAnimationFrame(() => el.classList.add("on"));
-  const bar = el.querySelector(".hw-bar i"),
-    step = el.querySelector(".hw-step");
+  const fill = el.querySelector(".hwl-track i"),
+    dot = el.querySelector(".hwl-dot"),
+    step = el.querySelector(".hwl-step");
   return {
     set: (p, label) => {
-      bar.style.width = Math.round(p * 100) + "%";
+      const v = Math.round(Math.min(1, p) * 100) + "%";
+      fill.style.width = v;
+      dot.style.left = v;
       if (label) step.textContent = label;
     },
     close: () => {
       el.classList.remove("on");
-      setTimeout(() => el.remove(), 600);
+      setTimeout(() => el.remove(), 700);
     },
   };
 }
