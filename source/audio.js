@@ -433,7 +433,7 @@ export class VehicleAudio {
       dest = inCab ? this.interior : null;
     // Layer recorded impacts by intensity, each varied so no two hits match.
     // K keeps crashes punchy but well below ear-splitting.
-    const K = 0.42;
+    const K = 0.14;
     this.play("crashLight", {
       at,
       gain: K * (0.12 + 0.2 * Math.min(1, s * 2)),
@@ -462,7 +462,7 @@ export class VehicleAudio {
         freq: rand(500, 4200),
         q: rand(2, 9),
         dur: rand(0.03, 0.12),
-        gain: rand(0.05, 0.16) * clamp(severity / 10, 0.4, 1.2) * 0.45,
+        gain: rand(0.05, 0.16) * clamp(severity / 10, 0.4, 1.2) * 0.15,
         delay: Math.pow(Math.random(), 1.8) * (0.15 + severity * 0.02),
         dest: this.cab ? this.interior : null,
       });
@@ -470,12 +470,12 @@ export class VehicleAudio {
   glass(at, size = 1) {
     if (!this.ctx || !this.enabled) return;
     const dest = this.cab ? this.interior : null;
-    this.burst({ at, freq: 4200, q: 0.5, dur: 0.22, gain: 0.14 * size, type: "highpass", reverb: 0.4, dest });
-    this.burst({ at, freq: 1900, q: 1.2, dur: 0.09, gain: 0.11 * size, dest });
+    this.burst({ at, freq: 4200, q: 0.5, dur: 0.22, gain: 0.05 * size, type: "highpass", reverb: 0.4, dest });
+    this.burst({ at, freq: 1900, q: 1.2, dur: 0.09, gain: 0.04 * size, dest });
     const n = Math.round(30 + 40 * size);
     for (let i = 0; i < n; i++) {
       const f = rand(2600, 9500);
-      this.ping({ at, freq: f, dur: rand(0.025, 0.14), gain: rand(0.012, 0.05) * size, delay: Math.pow(Math.random(), 2.2) * 0.85, reverb: 0.35, dest });
+      this.ping({ at, freq: f, dur: rand(0.025, 0.14), gain: rand(0.005, 0.02) * size, delay: Math.pow(Math.random(), 2.2) * 0.85, reverb: 0.35, dest });
     }
   }
   tinkle(at) {
@@ -495,7 +495,7 @@ export class VehicleAudio {
       g = new GainNode(c, { gain: 0 });
     f.frequency.setValueAtTime(3400, t);
     f.frequency.exponentialRampToValueAtTime(700, t + 0.18);
-    g.gain.linearRampToValueAtTime(0.14, t + 0.01);
+    g.gain.linearRampToValueAtTime(0.05, t + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
     s.connect(f).connect(g);
     this.route(g, at, 0.3);
