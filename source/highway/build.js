@@ -606,6 +606,20 @@ export class HighwayWorld {
         this.ribbon(marks, lp, -4.15, -4.0, 0.07, 0, L, 2, white);
       }
     }
+    // Zone access roads and rings.
+    for (const ac of this.layout.access) {
+      for (const lp of [ac.road, ac.ring]) {
+        const L = lp.length;
+        this.ribbon(pave, lp, -4.6, 4.6, 0.06, 0, L, 2, road, [LANE_W, 9]);
+        this.ribbon(pave, lp, -5.6, -4.6, 0.05, 0, L, 2, shoulder, [LANE_W, 9]);
+        this.ribbon(pave, lp, 4.6, 5.6, 0.05, 0, L, 2, shoulder, [LANE_W, 9]);
+        this.ribbon(marks, lp, -0.09, 0.09, 0.08, lp === ac.road ? 34 : 0, L, 3, yellow, null, 3, 6);
+        this.ribbon(marks, lp, 4.2, 4.35, 0.08, lp === ac.road ? 30 : 0, L, 2, white);
+        this.ribbon(marks, lp, -4.35, -4.2, 0.08, lp === ac.road ? 30 : 0, L, 2, white);
+      }
+      // Median crossover pad.
+      this.ribbon(pave, this.layout.main, -11.6 , 11.6, 0.125, ac.s - 13, ac.s + 13, 2, shoulder, [LANE_W, 9]);
+    }
     const pm = this.mesh(pave.geometry(), asphalt, "Pavement", false);
     pm.receiveShadow = true;
     this.mesh(paveC.geometry(), concreteMat, "Concrete pavement", false).receiveShadow = true;
@@ -704,6 +718,9 @@ export class HighwayWorld {
       gaps[1].push([ic.sc - 600, ic.sc + 600]);
       gaps[-1].push([ic.sc - 600, ic.sc + 600]);
     }
+    for (const ac of this.layout.access) gaps[ac.sd].push([ac.s - 16, ac.s + 16]);
+    const med = this.layout.access.map((ac) => ac.s);
+    const inMed = (s) => med.some((m) => Math.abs(((s - m + L / 2) % L + L) % L - L / 2) < 16);
     const inGap = (sd, s) => gaps[sd].some(([a, b]) => {
       const d = ((s - a) % L + L) % L;
       return d < b - a;
@@ -722,7 +739,7 @@ export class HighwayWorld {
         for (const [y0, y1] of [[0.55, 0.68], [0.68, 0.8]]) {
           railGeo.quad([a.x, y0, a.z], [b.x, y0, b.z], [b.x, y1, b.z], [a.x, y1, a.z], steel);
         }
-        if (s % 20 === 0) {
+        if (s % 20 === 0 && !inGap(sd, s + 10) && !inGap(sd, s + 20)) {
           main.point(s + 10, off, b);
           const yaw = -Math.atan2(b.z - a.z, b.x - a.x) * 0;
           const p = main.at(s + 10);
@@ -734,6 +751,7 @@ export class HighwayWorld {
     const cable = new Geo(),
       cableCol = C("#9aa0a2");
     for (let s = 0; s < L; s += 6) {
+      if (inMed(s) || inMed(s + 6) || (s % 24 === 0 && (inMed(s + 12) || inMed(s + 18) || inMed(s + 24)))) continue;
       main.point(s, 0, a);
       main.point(s + 6, 0, b);
       posts.push([a.x, a.z, 1]);

@@ -97,7 +97,36 @@ export function buildLayout() {
       end,
     });
   }
-  return { main, interchanges };
+  // Zone access: a two-way road off the inside shoulder (with a median
+  // crossover so both directions can turn in) ending in a ring with stops.
+  const access = [];
+  for (const zn of ZONES) {
+    if (zn.id.startsWith("farms")) continue;
+    const pr = main.project(zn.x, zn.z),
+      sd = Math.sign(pr.off) || 1,
+      R = 110;
+    const P = (off) => {
+      const p = main.point(pr.s, sd * off);
+      return [p.x, p.z];
+    };
+    const A1 = P(PAVE_OUT + 30),
+      ux = zn.x - A1[0],
+      uz = zn.z - A1[1],
+      ul = Math.hypot(ux, uz);
+    const entry = [zn.x - (ux / ul) * R, zn.z - (uz / ul) * R];
+    const road = new Path([P(PAVE_OUT - 2), P(PAVE_OUT + 12), A1, [(A1[0] + entry[0]) / 2, (A1[1] + entry[1]) / 2], entry], { step: 1 });
+    const ring = new Path(Array.from({ length: 28 }, (_, i) => {
+      const a = (i / 28) * Math.PI * 2;
+      return [zn.x + Math.cos(a) * R, zn.z + Math.sin(a) * R];
+    }), { closed: true, step: 1 });
+    const a0 = Math.atan2(-uz, -ux);
+    const stops = [0.55, 1.35, 2.15, 2.95, 3.75, 4.55, 5.35].map((k, i) => {
+      const a = a0 + k;
+      return { num: "Box " + (i + 1), pos: new T.Vector3(zn.x + Math.cos(a) * (R + 7.2), 0, zn.z + Math.sin(a) * (R + 7.2)), yaw: -a };
+    });
+    access.push({ zone: zn, s: pr.s, sd, road, ring, stops, label: zn.name });
+  }
+  return { main, interchanges, access };
 }
 
 // ------------------------------------------------------------- terrain
@@ -167,6 +196,7 @@ export function buildTerrain(layout, towns) {
     for (const r of ic.ramps) for (let s = 0; s < r.path.length; s += 8) seed(r.path.at(s).x, r.path.at(s).z, 22);
     for (let s = 0; s < ic.cross.length; s += 8) seed(ic.cross.at(s).x, ic.cross.at(s).z, 24);
   }
+  for (const ac of layout.access) for (const pth of [ac.road, ac.ring]) for (let s = 0; s < pth.length; s += 6) seed(pth.at(s).x, pth.at(s).z, 20);
   for (const ic of interchanges) for (const lp of ic.loops) for (let s = 0; s < lp.length; s += 8) seed(lp.at(s).x, lp.at(s).z, 20);
   for (const t of towns) for (let x = -650; x <= 560; x += 30) for (let z = -260; z <= 260; z += 30) seed(t.x + x, t.z + z, 30);
   // Chamfer passes to spread the distance field.

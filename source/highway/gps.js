@@ -35,6 +35,10 @@ export class Gps {
       lines.push({ pts: sample(ic.cross, 10), w: 14, c: "#d7dbdd" });
       for (const lp of ic.loops) lines.push({ pts: sample(lp, 10), w: 11, c: "#e3dfd2" });
     }
+    for (const ac of this.hw.layout.access || []) {
+      lines.push({ pts: sample(ac.road, 10), w: 11, c: "#e3dfd2" });
+      lines.push({ pts: sample(ac.ring, 10, true), w: 11, c: "#e3dfd2" });
+    }
     for (const t of this.hw.towns || []) {
       const o = t.origin,
         pts = [[o.x - 520, o.z + 2]];
@@ -57,6 +61,7 @@ export class Gps {
       m = hw.mission;
     if (!m) return null;
     const { main, interchanges } = hw.layout;
+    if (m.zone) return this.zoneRoute(px, pz, m);
     const ti = hw.towns.indexOf(m.town),
       tic = interchanges[ti];
     const target = [m.pos.x, m.pos.z];
@@ -126,6 +131,63 @@ export class Gps {
       sub = leg.dist < 900 ? Math.round(leg.dist) + " m to the ramp" : (leg.dist / 1609).toFixed(1) + " mi · stay on I-16";
     }
     return { pts, text, sub };
+  }
+  // Route to a Downtown / Industrial drop box: interstate → crossover → access road → ring.
+  zoneRoute(px, pz, m) {
+    const hw = this.hw,
+      { main, interchanges } = hw.layout,
+      ac = m.zone,
+      target = [m.pos.x, m.pos.z],
+      pts = [[px, pz]];
+    const ringLeg = (fromS) => {
+      const R = ac.ring,
+        L = R.length,
+        to = R.project(m.pos.x, m.pos.z).s;
+      let d = (((to - fromS) % L) + L) % L;
+      const dir = d < L / 2 ? 1 : -1;
+      if (dir < 0) d = L - d;
+      for (let k = 0; k <= d; k += 12) {
+        const p = R.at(fromS + k * dir);
+        pts.push([p.x, p.z]);
+      }
+      pts.push(target);
+    };
+    const inZone = Math.hypot(px - ac.zone.x, pz - ac.zone.z) < ac.zone.r + 150;
+    const d = Math.hypot(px - m.pos.x, pz - m.pos.z);
+    if (inZone) {
+      ringLeg(ac.ring.project(px, pz).s);
+      return { pts, text: m.lot.num + " · drop box", sub: d < 400 ? Math.round(d) + " m · pull up beside it" : "Follow the ring road" };
+    }
+    const here = this.townOf(px, pz);
+    let sStart = hw.player.s,
+      dir = hw.player.onMain ? hw.player.dir : 0;
+    if (here) {
+      const ic = interchanges[hw.towns.indexOf(here)];
+      for (let s = 0; s <= 740; s += 12) {
+        const p = ic.cross.at(s);
+        pts.push([p.x, p.z]);
+      }
+      sStart = ic.sc;
+    }
+    const L = main.length;
+    if (!dir) dir = ((((ac.s - sStart) % L) + L) % L) < L / 2 ? 1 : -1;
+    let dist = (((ac.s - sStart) * dir) % L + L) % L;
+    for (let k = 0; k <= dist; k += 25) {
+      const p = main.point(sStart + k * dir, 17 * dir);
+      pts.push([p.x, p.z]);
+    }
+    for (let s = 0; s <= ac.road.length; s += 12) {
+      const p = ac.road.at(s);
+      pts.push([p.x, p.z]);
+    }
+    const end = ac.road.at(ac.road.length);
+    ringLeg(ac.ring.project(end.x, end.z).s);
+    const turn = dir === ac.sd ? "Turn right" : "Cross the median, turn left";
+    return {
+      pts,
+      text: here ? "Head back to I-16" : dist < 700 ? turn + " · " + ac.label : ac.label,
+      sub: here ? "Follow the crossroad over the bridge" : dist < 700 ? Math.round(dist) + " m" : (dist / 1609).toFixed(1) + " mi · stay on I-16",
+    };
   }
   // ----------------------------------------------------------------- draw
   update(pos, fwd, speed, cars) {

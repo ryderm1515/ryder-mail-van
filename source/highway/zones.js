@@ -203,5 +203,19 @@ export function buildZones(hw) {
       group.add(m);
     }
   }
+  // Mail drop boxes at the zone stops (deliveries pull up beside these).
+  {
+    const boxes = [],
+      tops = [];
+    for (const ac of hw.layout.access)
+      for (const st of ac.stops) {
+        const { x, z } = st.pos,
+          y = ground(x, z) + 0.4;
+        boxes.push({ x, y, z, sx: 0.9, sy: 1.25, sz: 0.75, yaw: st.yaw, c: "#2d4a8a" });
+        tops.push({ x, y: y + 1.25, z, sx: 0.95, sy: 0.18, sz: 0.8, yaw: st.yaw, c: "#f2efe6" });
+        world.wall(x, y + 0.7, z, 0.45, 0.7, 0.38, st.yaw);
+      }
+    inst(box, M({}), [...boxes, ...tops]);
+  }
   return group;
 }

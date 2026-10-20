@@ -403,6 +403,12 @@ export class Highway {
       () => {
         const m = this.mission;
         if (!m) return;
+        if (m.zone) {
+          const R = m.zone.ring,
+            pr = R.project(m.pos.x, m.pos.z),
+            q = R.at(pr.s - 30);
+          return go(q.x, q.z, Math.atan2(q.tz, -q.tx))();
+        }
         const R = m.town.route;
         let best = 0,
           bd = 1e9;

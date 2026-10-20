@@ -68,7 +68,17 @@ export class Run {
       if (route.length && route[route.length - 1].town === p.town && route.filter((r) => r.town === p.town).length >= 3) continue;
       route.push(p);
     }
-    this.route = route.map((p) => ({ ...p, pos: p.lot.mailbox.clone().add(p.town.origin), label: p.lot.num + " · " + p.town.label }));
+    let route2 = route.map((p) => ({ ...p, pos: p.lot.mailbox.clone().add(p.town.origin), label: p.lot.num + " · " + p.town.label }));
+    // One or two business stops in Downtown / Industrial per route.
+    const acc = this.hw.layout.access || [];
+    const nz = acc.length ? 1 + Math.floor(Math.random() * 2) : 0;
+    for (let k = 0; k < nz; k++) {
+      const ac = acc[Math.floor(Math.random() * acc.length)],
+        st = ac.stops[Math.floor(Math.random() * ac.stops.length)];
+      if (route2.some((r) => r.lot === st)) continue;
+      route2.splice(1 + Math.floor(Math.random() * (route2.length - 1)), 1, { zone: ac, lot: st, pos: st.pos.clone(), label: st.num + " · " + ac.label });
+    }
+    this.route = route2;
     this.stop_i = 0;
     this.setMission();
   }
