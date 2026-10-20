@@ -42,6 +42,9 @@ export class Run {
     this.routesDone = 0;
     this.score = 0;
     this.time = 0;
+    this.lastHit = -9;
+    this.nearMisses = 0;
+    this.nearPending = null;
     this.clean = true; // no damage since the last delivery
     this.cleanStreak = 0;
     this.last = null;
@@ -111,6 +114,7 @@ export class Run {
     const loss = Math.max(0, (severity - 1.2) * 2.2) * this.dev.dmgMult;
     if (loss < 0.5) return;
     this.hp = Math.max(0, this.hp - loss);
+    this.lastHit = this.time;
     this.clean = false;
     this.cleanStreak = 0;
     this.pop("−" + Math.round(loss) + " van", "bad");
@@ -137,6 +141,26 @@ export class Run {
       }
     }
     this.last = { x: position.x, z: position.z };
+    // Near misses: threading past traffic at speed without touching it.
+    if (Math.abs(speed) > 17 && this.time - (this.lastHit ?? -9) > 1.5) {
+      for (const car of this.hw.traffic?.cars || []) {
+        if (!car.pos || car.wreck) continue;
+        const d = Math.hypot(car.pos.x - position.x, car.pos.z - position.z);
+        if (d < 3.6 && d > 1.2 && this.time - (car.nearAt ?? -9) > 4) {
+          car.nearAt = this.time;
+          this.nearPending = { car, at: this.time };
+        }
+      }
+      const n = this.nearPending;
+      if (n && this.time - n.at > 0.6) {
+        this.nearPending = null;
+        if (this.time - (this.lastHit ?? -9) > 0.7) {
+          this.score += 75;
+          this.nearMisses = (this.nearMisses || 0) + 1;
+          this.pop("+75 near miss", "good");
+        }
+      }
+    }
     if (this.dev.drain > 0 && !this.dev.invincible) {
       this.hp = Math.max(0, this.hp - this.dev.drain * dt);
       if (this.hp <= 0) return this.end("wrecked");
